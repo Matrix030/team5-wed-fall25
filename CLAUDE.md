@@ -141,6 +141,19 @@ flake8 .
   - Self-messaging prevention (database constraint)
   - Integration with listings: "Contact Seller" button creates threads
 
+**universities/** - University Domain Validation System
+- Database of 2,349 US universities with email domains
+- Secure registration via domain validation (replaces simple `.edu` check)
+- Auto-detect and assign university based on email domain
+- Admin verification workflow for unrecognized domains
+- **Key Features:**
+  - `University` model: University information (name, state, web pages)
+  - `UniversityDomain` model: Email domains with university mapping (supports multiple domains per university)
+  - Import command: `python manage.py import_universities` to load JSON data
+  - User fields: `validated_university`, `domain_verified`, `requires_admin_verification`
+  - Admin actions: Approve pending users, send notification emails
+  - Profile integration: Auto-populates university field from validated email
+
 ### Model Relationships
 
 ```
@@ -309,7 +322,7 @@ python manage.py showmigrations
 Order matters for template/static file discovery:
 1. Django contrib apps (admin, auth, contenttypes, sessions, messages, staticfiles)
 2. CampusNest (project app - for custom management commands)
-3. Project apps (accounts, profiles, listings, marketplace, messaging)
+3. Project apps (accounts, profiles, listings, marketplace, messaging, universities)
 
 ## Custom Management Commands
 
@@ -317,6 +330,12 @@ Order matters for template/static file discovery:
 ```bash
 # Create test users with random preferences (profiles app)
 python manage.py create_test_users --count 10
+
+# Import US universities from JSON file (universities app)
+python manage.py import_universities                    # Import from world_universities_and_domains.json
+python manage.py import_universities --file path/to/file.json  # Custom file path
+python manage.py import_universities --dry-run          # Preview without importing
+python manage.py import_universities --clear            # Clear existing data before import
 
 # Clean static files and Python cache (CampusNest app)
 python manage.py cleanstatic                    # Clean staticfiles/ with confirmation
@@ -645,7 +664,7 @@ def other_party(thread, user):
 
 1. **Static files not loading:** Ensure `STATICFILES_DIRS` is configured in settings.py
 2. **Email not sending:** Check `.env` has valid `EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD`
-3. **User creation fails:** Email must be `.edu` domain
+3. **User creation fails:** Email must be `.edu` domain (now validated against university database)
 4. **Login fails after registration:** User must verify email first
 5. **Tests fail with email errors:** Tests may need to mock email sending or use console backend
 6. **Migration conflicts:** Always pull latest migrations before creating new ones
@@ -653,3 +672,7 @@ def other_party(thread, user):
 8. **Duplicate thread errors:** Ensure user ordering is canonical (user_a.id < user_b.id) before creating threads
 9. **Messages not polling:** Check JavaScript console for errors; ensure thread.js is loaded
 10. **AJAX 403 errors:** User might not be a participant in the thread (authorization check failing)
+11. **User pending verification:** If user registers with unrecognized email domain, `requires_admin_verification=True` and admin must approve via admin panel
+12. **University not imported:** Run `python manage.py import_universities` to load university data from JSON file
+13. **Domain lookup fails:** Ensure UniversityDomain table is populated; check domain is lowercase and exact match
+14. **Profile university field empty:** If user's validated_university doesn't match hardcoded UNIVERSITY_CHOICES, field won't auto-populate (by design)

@@ -46,8 +46,30 @@ def create_profile(request):
             messages.success(request, "Profile created successfully!")
             return redirect("view_profile")  # this needs to exist
     else:
-        form = ProfileForm()
-    return render(request, "profiles/profile_form.html", {"form": form})
+        # Auto-populate university from validated_university if available
+        initial_data = {}
+        if request.user.validated_university:
+            # Try to match university name to UNIVERSITY_CHOICES
+            uni_name = request.user.validated_university.name
+            # Check if it's one of the predefined choices
+            from .models import Profile
+
+            uni_choices_dict = dict(Profile.UNIVERSITY_CHOICES)
+            # Try to find a match (case-insensitive)
+            for key, value in uni_choices_dict.items():
+                if uni_name.lower() in value.lower() or value.lower() in uni_name.lower():
+                    initial_data["university"] = key
+                    break
+
+        form = ProfileForm(initial=initial_data)
+
+    context = {
+        "form": form,
+        "detected_university": request.user.validated_university.name
+        if request.user.validated_university
+        else None,
+    }
+    return render(request, "profiles/profile_form.html", context)
 
 
 @login_required

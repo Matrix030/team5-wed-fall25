@@ -21,6 +21,24 @@ class User(AbstractUser):
 
     is_verified = models.BooleanField(default=False)
 
+    # University domain validation fields
+    validated_university = models.ForeignKey(
+        "universities.University",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+        help_text="University auto-detected from email domain",
+    )
+    domain_verified = models.BooleanField(
+        default=False,
+        help_text="Email domain was found in university database",
+    )
+    requires_admin_verification = models.BooleanField(
+        default=False,
+        help_text="Email domain not recognized, requires admin approval",
+    )
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 

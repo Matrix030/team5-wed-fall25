@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "listings",
     "marketplace",
     "messaging",
+    "universities",
 ]
 
 MIDDLEWARE = [

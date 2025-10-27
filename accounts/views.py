@@ -19,6 +19,7 @@ def register(request):
     Handle user registration
     - Display registration form (GET)
     - Process form submission and send verification email (POST)
+    - Validate email domain against university database
     """
     if request.method == "POST":
         form = RegistrationForm(request.POST)
@@ -27,7 +28,44 @@ def register(request):
             user = form.save(commit=False)
             user.is_verified = False  # User must verify email first
             user.is_active = True  # Allow login but restrict features
+
+            # Set university validation fields from form
+            if hasattr(form, "validated_university"):
+                user.validated_university = form.validated_university
+            if hasattr(form, "domain_verified"):
+                user.domain_verified = form.domain_verified
+            if hasattr(form, "requires_admin_verification"):
+                user.requires_admin_verification = form.requires_admin_verification
+
             user.save()
+
+            # Send admin notification if domain not recognized
+            if user.requires_admin_verification:
+                admin_subject = f"New User Pending Verification - {user.email}"
+                admin_message = f"""
+                A new user has registered with an unrecognized email domain:
+
+                Name: {user.first_name} {user.last_name}
+                Email: {user.email}
+                Domain: {user.email.split('@')[1]}
+                Registration Time: {user.date_joined}
+
+                Please review and approve this user in the admin panel:
+                http://{get_current_site(request).domain}/admin/accounts/user/{user.id}/change/
+
+                CampusNest Admin System
+                """
+
+                # Send to all admins
+                admin_emails = [admin[1] for admin in settings.ADMINS] if settings.ADMINS else []
+                if admin_emails:
+                    send_mail(
+                        admin_subject,
+                        admin_message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        admin_emails,
+                        fail_silently=True,  # Don't block registration if admin email fails
+                    )
 
             # Generate verification token
             token = default_token_generator.make_token(user)
@@ -41,13 +79,17 @@ def register(request):
 
             # Send verification email
             subject = "Verify Your CampusNest Account"
+            university_info = ""
+            if user.validated_university:
+                university_info = f"\nDetected University: {user.validated_university.name}\n"
+
             message = f"""
             Hi {user.first_name},
             # noqa: W293
             Welcome to CampusNest! Please verify your email address by clicking the link below:
             # noqa: W293
             {verification_link}
-            # noqa: W293
+            {university_info}# noqa: W293
             This link will expire in 24 hours.
             # noqa: W293
             If you didn't create this account, please ignore this email.
@@ -64,10 +106,17 @@ def register(request):
                 fail_silently=False,
             )
 
-            messages.success(
-                request,
-                "Registration successful! Please check your email to verify your account.",
-            )
+            # Success message varies based on verification status
+            if user.requires_admin_verification:
+                messages.warning(
+                    request,
+                    "Registration successful! Your email domain requires admin verification. You'll receive a notification once approved. Please check your email to verify your account.",
+                )
+            else:
+                messages.success(
+                    request,
+                    "Registration successful! Please check your email to verify your account.",
+                )
             return redirect("register")
     else:
         form = RegistrationForm()
