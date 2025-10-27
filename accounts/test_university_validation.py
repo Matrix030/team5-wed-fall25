@@ -216,18 +216,18 @@ class RegistrationViewUniversityValidationTests(TestCase):
         self.assertFalse(user.domain_verified)
         self.assertTrue(user.requires_admin_verification)
 
-        # Should send TWO emails: verification + admin notification
+        # Should send TWO emails: admin notification + verification
         self.assertEqual(len(mail.outbox), 2)
 
-        # Check verification email
-        verification_email = mail.outbox[0]
-        self.assertIn("Verify Your CampusNest Account", verification_email.subject)
-
-        # Check admin notification email
-        admin_email = mail.outbox[1]
+        # Check admin notification email (sent first)
+        admin_email = mail.outbox[0]
         self.assertIn("Pending Verification", admin_email.subject)
         self.assertIn("unknown-college.edu", admin_email.body)
         self.assertIn("admin@campusnest.com", admin_email.to)
+
+        # Check verification email (sent second)
+        verification_email = mail.outbox[1]
+        self.assertIn("Verify Your CampusNest Account", verification_email.subject)
 
     def test_registration_shows_warning_for_unknown_domain(self):
         """Test that registration shows warning message for unknown domain."""

@@ -6,11 +6,12 @@ import re
 
 def validation_edu_email(value):
     """
-    Stricter validation: ensures domain is exactly *.edu (not *.*.edu)
+    Validates .edu email addresses, including subdomains (e.g., baruch.cuny.edu)
     """
-    strict_edu_pattern = r"^[\w\.-]+@[\w-]+\.edu$"
+    # Updated pattern to allow subdomains like baruch.cuny.edu
+    edu_pattern = r"^[\w\.\+-]+@[\w\.-]+\.edu$"
 
-    if not re.match(strict_edu_pattern, value):
+    if not re.match(edu_pattern, value):
         raise ValidationError(
             "Please enter a valid .edu email address from your university"
         )

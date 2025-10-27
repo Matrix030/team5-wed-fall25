@@ -80,9 +80,20 @@ class CompleteRegistrationFlowTests(TestCase):
             "cleanliness_preference": "no_preference",
             "budget_min": 1000,
             "budget_max": 2000,
+            "location": "",
+            "move_in_date": "",
+            "visibility": True,
         }
 
         response = self.client.post(reverse("create_profile"), data=profile_data)
+
+        # If response has form errors, the profile won't be created
+        # Check if redirect happened (success) or form was re-rendered (failure)
+        if response.status_code != 302:
+            # Profile creation failed, check what went wrong
+            if hasattr(response, 'context') and 'form' in response.context:
+                form_errors = response.context['form'].errors
+                self.fail(f"Profile creation failed with errors: {form_errors}")
 
         # Verify profile created
         profile = Profile.objects.get(user=user)
