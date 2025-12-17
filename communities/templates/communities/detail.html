@@ -14,7 +14,7 @@
 
     <div class="community-header-content">
         <h1>{{ community.name }}</h1>
-        <p>{{ community.description }}</p>
+        <p>{{ community.description|linebreaksbr }}</p>
         <div class="community-badges">
             <span class="badge badge-{{ community.privacy }}">{{ community.get_privacy_display }}</span>
             {% if community.university %}
